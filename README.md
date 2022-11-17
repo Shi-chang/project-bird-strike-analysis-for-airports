@@ -1,5 +1,5 @@
 # Overview
-In this project, out team ahs built a relational schema, established a database with a large data set, and conducted data analysis.
+In this project, out team has built a relational schema, established a database with a large data set from Federal Aviation Administration, and conducted data analysis.
 
 # What I have learned
 1. How to design a schema, created the database, and loaded data from csv files into database with RStudio.
