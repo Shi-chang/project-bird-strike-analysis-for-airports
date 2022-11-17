@@ -1,0 +1,1183 @@
+---
+title: "practicum1"
+authors: "Ce Zhao(zhao.ce1@northeastern.edu),
+          Ruoxuan Peng(peng.ruo@northeastern.edu),
+          Shichang Ye(ye.shic@northeastern.edu), 
+          Yifan Zhou(zhou.yifan@northeastern.edu)"
+date: "2022-11-01"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+<img src="C:\Practicum1\Submission\ERD.jpg"/>
+<img src="C:\Practicum1\Submission\Schema.jpeg"/>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=FALSE, warning = FALSE, message = FALSE)
+```
+
+# ******************Connect to database********************
+```{r, eval=TRUE}
+library(DBI)
+library(sqldf)
+library(stringr)
+library(rapport)
+library (purrr)
+dbcon <- dbConnect(odbc::odbc(),
+                .connection_string = "Driver={MySQL ODBC 8.0 Unicode Driver};", 
+                Server = "localhost", Database = "practicumone", Uid = "root", PWD = 123456,
+                Port = 3306)
+```
+
+# *********************Drop tables***********************
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS record;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS aircraft;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS aircraft_type;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS aircraft_model;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS airline;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS location;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS origin_state;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS airport;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS Weather;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS precipitation;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS altitude;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS wildlife;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS wildlife_species;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS damage;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS flight;
+```
+
+```{sql connection=dbcon}
+DROP TABLE IF EXISTS impact_to_flight;
+```
+
+# *********************Create tables***********************
+# ------------------Aircraft-----------------
+
+# Creates the aircraft_type table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS aircraft_type(
+  at_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL DEFAULT 'Airplane'
+);
+```
+
+# Creates the aircraft_model table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS aircraft_model(
+  am_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  model_name VARCHAR(200) NOT NULL
+);
+```
+
+# Creates the airline table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS airline(
+  airline_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  airline_name VARCHAR(200) NOT NULL
+);
+```
+
+# Creates the aircraft table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS aircraft(
+  aircraft_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  aircraft_type INTEGER,
+  aircraft_model INTEGER,
+  number_of_engines INTEGER,
+  airline INTEGER NOT NULL,
+  is_large VARCHAR(100),
+  FOREIGN KEY (aircraft_type)
+    REFERENCES aircraft_type(at_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (aircraft_model)
+    REFERENCES aircraft_model(am_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (airline)
+    REFERENCES airline(airline_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+```
+
+# ------------------Location-----------------
+# Creates the origin_state table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS origin_state(
+  state_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  state_name VARCHAR(200)
+);
+```
+
+# Creates the airport table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS airport(
+  airport_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  airport_name VARCHAR(255) NOT NULL
+);
+```
+
+# Creates the location table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS location(
+  location_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  airport INTEGER,
+  origin_state INTEGER,
+  FOREIGN KEY (airport)
+    REFERENCES airport(airport_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (origin_state)
+    REFERENCES origin_state(state_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+```
+
+# ------------------Weather-----------------
+# Creates the precipitation table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS precipitation(
+  precipitation_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  precipitation VARCHAR(100) NOT NULL DEFAULT 'None'
+);
+```
+
+# Creates the weather table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS weather(
+  weather_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  precipitation INTEGER,
+  sky_condition VARCHAR(100) NOT NULL check (sky_condition IN ('No Cloud', 'Some Cloud', 'Overcast')),
+  FOREIGN KEY (precipitation)
+    REFERENCES precipitation(precipitation_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+```
+
+# ------------------Altitude-----------------
+# Creates the altitude table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS altitude(
+  altitude_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  altitude_range VARCHAR(200),
+  feet_above_ground VARCHAR(100)
+);
+```
+
+# ------------------Wildlife-----------------
+# Creates the wildlife_species table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS wildlife_species(
+  species_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(200) NOT NULL
+);
+```
+
+# Creates the wildlife table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS wildlife(
+  wildlife_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  number_struck INTEGER NOT NULL,
+  number_category VARCHAR(200),
+  is_remains_collected VARCHAR(100) DEFAULT 'FALSE',
+  is_remains_sent VARCHAR(100) DEFAULT 'FALSE',
+  size VARCHAR(100),
+  species INTEGER NOT NULL,
+  FOREIGN KEY (species)
+    REFERENCES wildlife_species(species_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+```
+
+# ------------------Damage-----------------
+# Creates the impact_to_flight table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS impact_to_flight(
+  itf_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  impact VARCHAR(200) NOT NULL
+);
+```
+
+# Creates the damage table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS damage(
+  damage_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  impact_to_flight INTEGER,
+  indicated_damage VARCHAR(200) NOT NULL check (indicated_damage IN ('Caused damage', 'No damage')),
+  total_cost INTEGER NOT NULL,
+  people_injured INTEGER NOT NULL DEFAULT '0',
+  FOREIGN KEY (impact_to_flight)
+    REFERENCES impact_to_flight(itf_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+```
+
+# ------------------Flight-----------------
+# Creates the flight table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS flight(
+  flight_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  flight_date VARCHAR(100),
+  phase_of_flight VARCHAR(200),
+  warned_of_wildlife VARCHAR(10)
+);
+```
+
+# ------------------Record-----------------
+# Creates the record table
+```{sql connection=dbcon}
+CREATE TABLE IF NOT EXISTS record(
+  record_id INTEGER AUTO_INCREMENT PRIMARY KEY,
+  aircraft INTEGER NOT NULL,
+  wildlife INTEGER NOT NULL,
+  location INTEGER NOT NULL,
+  weather INTEGER NOT NULL,
+  altitude INTEGER NOT NULL,
+  damage INTEGER NOT NULL,
+  flight INTEGER NOT NULL,
+  remarks TEXT,
+  FOREIGN KEY (aircraft)
+    REFERENCES aircraft(aircraft_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (wildlife)
+    REFERENCES wildlife(wildlife_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (location)
+    REFERENCES location(location_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (weather)
+    REFERENCES weather(weather_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (altitude)
+    REFERENCES altitude(altitude_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (damage)
+    REFERENCES damage(damage_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  FOREIGN KEY (flight)
+    REFERENCES flight(flight_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+);
+```
+
+# *********************Populate tables***********************
+#    (To avoid potential crash, please click one by one)
+# Creates a data frame based on the csv file for data consumption later.
+```{r}
+all_records = read.csv("C:/Practicum1/BirdStrikesData.csv", stringsAsFactors = FALSE)
+all_records[all_records == ""] = "N.A."
+```
+
+```{r}
+# ---Populates the impact_to_flight table---
+distinct_impacts = sqldf("SELECT DISTINCT [Effect..Impact.to.flight] FROM all_records")
+num_of_rows = nrow(distinct_impacts)
+i = 1
+while (i <= num_of_rows) {
+  impact = distinct_impacts[i,]
+  statement = "INSERT INTO impact_to_flight(impact) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(impact)
+    )
+  i = i + 1
+  if (i %% 50 == 0) {
+    rm(impact)
+    rm(statement)
+  }
+}
+```
+
+```{r}
+# --- Populates the damage table---
+damage_cases = sqldf("SELECT [Effect..Impact.to.flight],[Effect..Indicated.Damage],[Cost..Total..],[Number.of.people.injured] FROM all_records
+                         GROUP BY [Effect..Impact.to.flight],[Effect..Indicated.Damage],[Cost..Total..],[Number.of.people.injured]")
+
+num_of_rows = nrow(damage_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = damage_cases[i,]
+  impact = row$Effect..Impact.to.flight
+
+  # Reference 4
+  response = dbGetQuery(
+    dbcon,
+    "SELECT itf_id FROM impact_to_flight WHERE impact = ? LIMIT 1",
+    params = list(impact))
+  itf_id = response$itf_id
+  indicated_damage = str_trim(row$Effect..Indicated.Damage)
+  total_cost = as.numeric(gsub(",", "", row$Cost..Total..))
+  people_injured = str_trim(row$Number.of.people.injured)
+  statement = "INSERT INTO damage(impact_to_flight,indicated_damage,total_cost,people_injured) VALUES (?,?,?,?)"
+
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(itf_id,indicated_damage,total_cost,people_injured)
+    )
+  
+  i = i + 1
+  if (i %% 100 == 0) {
+    rm(row)
+    rm(impact)
+    rm(response)
+    rm(itf_id)
+    rm(indicated_damage)
+    rm(total_cost)
+    rm(people_injured)
+    rm(statement)
+  }
+}
+```
+
+```{r}
+# ---Populates the airline table---
+airline_names = sqldf("SELECT DISTINCT [Aircraft..Airline.Operator] FROM all_records")
+
+for (name in airline_names) {
+  statement = "INSERT INTO airline(airline_name) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(name))
+    )
+
+  rm(statement)
+}
+```
+
+```{r}
+# ---Populates the aircraft_model table---
+model_names = sqldf("SELECT DISTINCT [Aircraft..Make.Model] FROM all_records")
+
+for (name in model_names) {
+  statement = "INSERT INTO aircraft_model(model_name) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(name))
+    )
+  
+  rm(statement)
+}
+```
+
+```{r}
+# ---Populates the aircraft_type table---
+aircraft_type_names = sqldf("SELECT DISTINCT [Aircraft..Type] FROM all_records")
+for (name in aircraft_type_names) {
+  statement = "INSERT INTO aircraft_type(name) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(name))
+    )
+  
+  rm(statement)
+}
+```
+
+```{r}
+# ---Populates the aircraft table---
+aircraft_cases = sqldf("SELECT [Aircraft..Type],[Aircraft..Make.Model],
+                          [Aircraft..Number.of.engines.],[Aircraft..Airline.Operator],
+                          [Is.Aircraft.Large.] 
+                        FROM all_records
+                        GROUP BY [Aircraft..Type],[Aircraft..Make.Model],
+                          [Aircraft..Number.of.engines.],[Aircraft..Airline.Operator],
+                          [Is.Aircraft.Large.]
+                    ")
+
+num_of_rows = nrow(aircraft_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = aircraft_cases[i,]
+
+  number_of_engines = str_trim(row$Aircraft..Number.of.engines.)
+  if (number_of_engines =="N.A." || typeof(number_of_engines) != "double") {
+    number_of_engines = 0
+  }
+  
+  is_large = str_trim(row$Is.Aircraft.Large.)
+  
+  aircraft_type = str_trim(row$Aircraft..Type)
+  aircraft_model = str_trim(row$Aircraft..Make.Model)
+  airline = str_trim(row$Aircraft..Airline.Operator)
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT at_id FROM aircraft_type WHERE name = ? LIMIT 1",
+    params = list(aircraft_type))
+  at_id = response$at_id
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT am_id FROM aircraft_model WHERE model_name = ? LIMIT 1",
+    params = list(aircraft_model))
+  am_id = response$am_id
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT airline_id FROM airline WHERE airline_name = ? LIMIT 1",
+    params = list(airline))
+  airline_id = response$airline_id
+
+  statement = "INSERT INTO aircraft(aircraft_type,aircraft_model,number_of_engines,airline,is_large) VALUES (?,?,?,?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(at_id,am_id,number_of_engines,airline_id,is_large)
+    )
+  
+  i = i + 1
+  
+  if (i %% 20 == 0) {
+    rm(row)
+    rm(number_of_engines)
+    rm(is_large)
+    rm(aircraft_type)
+    rm(aircraft_model)
+    rm(airline)
+    rm(response)
+    rm(am_id)
+    rm(at_id)
+    rm(airline_id)
+    rm(statement)
+    gc()
+  }
+}
+```
+
+```{r}
+# ---Populates the airport table---
+airport_names = sqldf("SELECT DISTINCT [Airport..Name] FROM all_records")
+for (name in airport_names) {
+  statement = "INSERT INTO airport(airport_name) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(name))
+    )
+  
+  rm(statement)
+  gc()
+}
+```
+
+```{r}
+# ---Populates the origin_state table---
+state_names = sqldf("SELECT DISTINCT [Origin.State] FROM all_records
+                            GROUP BY [Origin.State]
+                    ")
+for (name in state_names) {
+  statement = "INSERT INTO origin_state(state_name) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(name))
+    )
+  
+  rm(statement)
+  gc()
+}
+```
+
+```{r}
+# --- Populates the location table---
+location_cases = sqldf("SELECT [Origin.State],[Airport..Name] FROM all_records
+                            GROUP BY [Origin.State],[Airport..Name]
+                    ")
+
+num_of_rows = nrow(location_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = location_cases[i,]
+
+  airport_name = str_trim(row$Airport..Name)
+  origin_state = str_trim(row$Origin.State)
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT airport_id FROM airport WHERE airport_name = ? LIMIT 1",
+    params = list(airport_name))
+  airport_id = response$airport_id
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT state_id FROM origin_state WHERE state_name = ? LIMIT 1",
+    params = list(origin_state))
+  state_id = response$state_id
+
+  statement = "INSERT INTO location(airport,origin_state) VALUES (?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(airport_id,state_id)
+    )
+  i = i + 1
+  
+  if (i %% 100 == 0) {
+    rm(row)
+    rm(airport_name)
+    rm(origin_state)
+    rm(statement)
+    rm(airport_id)
+    rm(response)
+    rm(state_id)
+    rm(statement)
+    gc()
+  }
+}
+```
+
+```{r}
+# ---Populates the wildlife_species table---
+species_names = sqldf("SELECT DISTINCT [Wildlife..Species] FROM all_records
+                            WHERE [Wildlife..Species] !=''
+                            GROUP BY [Wildlife..Species]
+                    ")
+for (name in species_names) {
+  statement = "INSERT INTO wildlife_species(name) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(name))
+    )
+  
+  rm(statement)
+  gc()
+}
+```
+
+```{r}
+# ---Populates the wildlife table---
+wildlife_cases = sqldf("SELECT [Wildlife..Number.Struck.Actual],
+                              [Wildlife..Number.struck],
+                              [Remains.of.wildlife.collected.],
+                              [Remains.of.wildlife.sent.to.Smithsonian],
+                              [Wildlife..Size],
+                              [Wildlife..Species]FROM all_records
+                            GROUP BY [Wildlife..Number.Struck.Actual],
+                              [Wildlife..Number.struck],
+                              [Remains.of.wildlife.collected.],
+                              [Remains.of.wildlife.sent.to.Smithsonian],
+                              [Wildlife..Size],
+                              [Wildlife..Species]")
+
+num_of_rows = nrow(wildlife_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = wildlife_cases[i,]
+  number_struck = str_trim(row$Wildlife..Number.Struck.Actual)
+  number_category = str_trim(row$Wildlife..Number.struck)
+  is_remains_collected = str_trim(row$Remains.of.wildlife.collected.)
+  is_remains_sent = str_trim(row$Remains.of.wildlife.sent.to.Smithsonian)
+  size = str_trim(row$Wildlife..Size)
+  species= str_trim(row$Wildlife..Species)
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT species_id FROM wildlife_species WHERE name = ? LIMIT 1",
+    params = list(species))
+  species_id = response$species_id
+  
+
+  statement = "INSERT INTO wildlife(number_struck,number_category,is_remains_collected,is_remains_sent,size,species) VALUES (?,?,?,?,?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(number_struck,number_category,is_remains_collected,is_remains_sent,size,species_id)
+    )
+  
+  i = i + 1
+  if (i %% 50 == 0) {
+    rm(row)
+    rm(number_struck)
+    rm(number_category)
+    rm(is_remains_collected)
+    rm(is_remains_sent)
+    rm(size)
+    rm(species)
+    rm(species_id)
+    rm(statement)
+    rm(response)
+    gc()
+  }
+}
+```
+
+```{r}
+# ---Populates the altitude table---
+altitude_cases = sqldf("SELECT [Altitude.bin],[Feet.above.ground] FROM all_records
+                            GROUP BY [Altitude.bin],[Feet.above.ground]
+                    ")
+
+num_of_rows = nrow(altitude_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = altitude_cases[i,]
+  altitude_range = str_trim(row$Altitude.bin)
+  feet_above_ground = str_trim(row$Feet.above.ground)
+
+  statement = "INSERT INTO altitude(altitude_range,feet_above_ground) VALUES (?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(altitude_range,feet_above_ground)
+    )
+
+  i = i + 1
+  if (i %% 100 == 0) {
+
+    rm(row)
+    rm(altitude_range)
+    rm(feet_above_ground)
+    rm(statement)
+    gc()
+  }
+}
+```
+
+```{r}
+# ---Populates the precipitation table---
+precipitation_cases = sqldf("SELECT DISTINCT [Conditions..Precipitation] FROM all_records")
+
+for (case in precipitation_cases) {
+  statement = "INSERT INTO precipitation(precipitation) VALUES (?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(str_trim(case))
+    )
+  
+  rm(statement)
+}
+```
+
+```{r}
+# ---Populates the weather table---
+weather_cases = sqldf("SELECT DISTINCT [Conditions..Precipitation],[Conditions..Sky] FROM all_records
+                            GROUP BY [Conditions..Precipitation],[Conditions..Sky]")
+
+num_of_rows = nrow(weather_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = weather_cases[i,]
+  precipitation = str_trim(row$Conditions..Precipitation)
+  sky_condition = str_trim(row$Conditions..Sky)
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT precipitation_id FROM precipitation WHERE precipitation = ? LIMIT 1",
+    params = list(precipitation))
+  precipitation_id = response$precipitation_id
+  
+  statement = "INSERT INTO weather(precipitation,sky_condition) VALUES (?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(precipitation_id,sky_condition)
+    )
+  i = i + 1
+  
+  if (i %% 100 == 0) {
+    rm(row)
+    rm(precipitation_id)
+    rm(response)
+    rm(precipitation)
+    rm(sky_condition)
+    rm(statement)
+    gc()    
+  }
+}
+```
+
+```{r}
+# ---Populates the flight table. It takes some time to run.---
+flight_cases = sqldf("
+                      SELECT [FlightDate],[When..Phase.of.flight],[Pilot.warned.of.birds.or.wildlife.] 
+                      FROM all_records
+                      GROUP BY [FlightDate],[When..Phase.of.flight],[Pilot.warned.of.birds.or.wildlife.]
+                      ")
+num_of_rows = nrow(flight_cases)
+i = 1
+
+while (i <= num_of_rows) {
+  row = flight_cases[i,]
+
+  flight_date = row$FlightDate
+  phase_of_flight = str_trim(row$When..Phase.of.flight)
+  warned_of_wildlife = str_trim(row$Pilot.warned.of.birds.or.wildlife.)
+  
+  # Reference 3
+  statement = "INSERT INTO flight(flight_date,phase_of_flight,warned_of_wildlife) VALUES (?,?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(flight_date,phase_of_flight,warned_of_wildlife)
+    )
+  
+  i = i + 1
+  
+  if (i %% 50 == 0) {
+    rm(row)
+    rm(flight_date)
+    rm(phase_of_flight)
+    rm(warned_of_wildlife)
+    rm(statement)
+    gc()
+  }
+}
+```
+
+```{r}
+# ---Populates the record table. It takes some time to run.---
+# Gets the total number of rows of the data frame.
+num_of_rows = nrow(all_records)
+i = 1
+
+# Iterates over every row of the data frame.
+while (i <= num_of_rows) {
+  # Gets the current row
+  row = all_records[i, ]
+  
+  # --- Omits records without flight or aircraft information---
+  if (str_trim(row$Aircraft..Type) == '' || str_trim(row$FlightDate) == '') {
+    i = i + 1
+    next
+  }
+
+  # --- Populates the record table---
+  record_id = str_trim(row$Record.ID)
+  
+  
+  number_of_engines = str_trim(row$Aircraft..Number.of.engines.)
+  if (number_of_engines =="N.A." || typeof(number_of_engines) != "double") {
+    number_of_engines = 0
+  }
+  
+  is_large = str_trim(row$Is.Aircraft.Large.)
+  aircraft_type = str_trim(row$Aircraft..Type)
+  aircraft_model = str_trim(row$Aircraft..Make.Model)
+  airline = str_trim(row$Aircraft..Airline.Operator)
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT at_id FROM aircraft_type WHERE name = ? LIMIT 1",
+    params = list(aircraft_type))
+  at_id = response$at_id
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT am_id FROM aircraft_model WHERE model_name = ? LIMIT 1",
+    params = list(aircraft_model))
+  am_id = response$am_id
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT airline_id FROM airline WHERE airline_name = ? LIMIT 1",
+    params = list(airline))
+  airline_id = response$airline_id
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT aircraft_id FROM aircraft 
+    WHERE number_of_engines = ? AND is_large = ? 
+      AND aircraft_type = ? 
+      AND aircraft_model = ? 
+      AND airline = ? 
+      LIMIT 1",
+    params = list(number_of_engines,is_large,at_id,am_id,airline_id))
+  aircraft_id = response$aircraft_id
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT LAST_INSERT_ID() AS wildlife_id FROM wildlife LIMIT 1")
+  wildlife_id = response$wildlife_id
+
+  
+  number_struck = str_trim(row$Wildlife..Number.Struck.Actual)
+  number_category = str_trim(row$Wildlife..Number.struck)
+  is_remains_collected = str_trim(row$Remains.of.wildlife.collected.)
+  is_remains_sent = str_trim(row$Remains.of.wildlife.sent.to.Smithsonian)
+  size = str_trim(row$Wildlife..Size)
+  species= str_trim(row$Wildlife..Species)
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT species_id FROM wildlife_species WHERE name = ? LIMIT 1",
+    params = list(species))
+  species_id = response$species_id
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT wildlife_id FROM wildlife 
+      WHERE number_struck = ? 
+      AND number_category = ? 
+      AND is_remains_collected = ? 
+      AND is_remains_sent = ? 
+      AND size = ? 
+      AND species = ?
+      LIMIT 1",
+    params = list(number_struck,number_category,is_remains_collected,is_remains_sent,size,species_id))
+  wildlife_id = response$wildlife_id
+
+
+  airport_name = str_trim(row$Airport..Name)
+  origin_state = str_trim(row$Origin.State)
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT airport_id FROM airport 
+      WHERE airport_name = ?
+      LIMIT 1",
+    params = list(airport_name))
+  airport_id = response$airport_id
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT state_id FROM origin_state WHERE state_name = ? LIMIT 1",
+    params = list(origin_state))
+  state_id = response$state_id
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT location_id FROM location 
+      WHERE airport = ? 
+      AND origin_state = ? 
+      LIMIT 1",
+    params = list(airport_id,state_id))
+  location_id = response$location_id
+
+  precipitation = str_trim(row$Conditions..Precipitation)
+  sky_condition = str_trim(row$Conditions..Sky)
+  response = dbGetQuery(
+    dbcon,
+    "SELECT precipitation_id FROM precipitation
+    WHERE precipitation = ? LIMIT 1",
+    params = list(precipitation))
+  precipitation_id = response$precipitation_id
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT weather_id FROM weather
+    WHERE precipitation = ? AND sky_condition = ? LIMIT 1",
+    params = list(precipitation_id,sky_condition))
+  weather_id = response$weather_id
+  
+  
+  altitude_range = str_trim(row$Altitude.bin)
+  feet_above_ground = str_trim(row$Feet.above.ground)
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT altitude_id FROM altitude
+    WHERE altitude_range = ? AND feet_above_ground = ? LIMIT 1",
+    params = list(altitude_range,feet_above_ground))
+  altitude_id = response$altitude_id
+
+  response = dbGetQuery(
+    dbcon,
+    "SELECT LAST_INSERT_ID() AS damage_id FROM damage LIMIT 1")
+  damage_id = response$damage_id
+
+  impact = row$Effect..Impact.to.flight
+  response = dbGetQuery(
+    dbcon,
+    "SELECT itf_id FROM impact_to_flight WHERE impact = ? LIMIT 1",
+    params = list(impact))
+  itf_id = response$itf_id
+  indicated_damage = str_trim(row$Effect..Indicated.Damage)
+  total_cost = as.numeric(gsub(",", "", row$Cost..Total..))
+  people_injured = str_trim(row$Number.of.people.injured)
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT damage_id FROM damage 
+      WHERE impact_to_flight = ? AND indicated_damage = ? AND total_cost = ? AND people_injured = ? 
+      LIMIT 1",
+    params = list(itf_id,indicated_damage,total_cost,people_injured))
+  damage_id = response$damage_id
+
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT LAST_INSERT_ID() AS flight_id FROM flight LIMIT 1")
+  flight_id = response$flight_id
+  
+  
+  flight_date = str_trim(row$FlightDate)
+  phase_of_flight = str_trim(row$When..Phase.of.flight)
+  warned_of_wildlife = str_trim(row$Pilot.warned.of.birds.or.wildlife.)
+  
+  response = dbGetQuery(
+    dbcon,
+    "SELECT flight_id FROM flight 
+      WHERE flight_date = ? AND phase_of_flight = ? AND warned_of_wildlife = ?
+      LIMIT 1",
+    params = list(flight_date,phase_of_flight,warned_of_wildlife))
+  flight_id = response$flight_id
+  
+  remark = str_trim(row$Remarks)
+
+  
+  statement = "INSERT INTO record(record_id,aircraft,wildlife,location,weather,altitude,damage,flight,remarks) VALUES (?,?,?,?,?,?,?,?,?)"
+  dbSendStatement(
+    dbcon,
+    statement,
+    params = list(record_id,aircraft_id,wildlife_id,location_id,weather_id,altitude_id,damage_id,flight_id,remark)
+    )
+  
+  # --- Increments the counter, removes variables, and apply the garbage collector. Important! ---
+  # Reference 5.
+  i = i + 1
+  if (i %% 50 == 0) {
+    rm(altitude_range)
+    rm(impact)
+    rm(itf_id)
+    rm(is_large)
+    rm(at_id)
+    rm(am_id)
+    rm(airline_id)
+    rm(feet_above_ground)
+    rm(precipitation)
+    rm(sky_condition)
+    rm(flight_date_temp)
+    rm(flight_date)
+    rm(phase_of_flight)
+    rm(warned_of_wildlife)
+    rm(sky_condition)
+    rm(indicated_damage)
+    rm(total_cost)
+    rm(people_injured)
+    rm(number_of_engines)
+    rm(aircraft_type)
+    rm(aircraft_model)
+    rm(airline)
+    rm(airport_name)
+    rm(origin_state)
+    rm(airport_id)
+    rm(state_id)
+    rm(record_id)
+    rm(aircraft_id)
+    rm(wildlife_id)
+    rm(location_id)
+    rm(weather_id)
+    rm(altitude_id)
+    rm(damage_id)
+    rm(flight_id)
+    rm(remark)
+    rm(statement)
+    rm(response)
+    rm(row)
+    gc()
+  }
+}
+```
+
+# ******************TASK 4********************
+```{sql connection = dbcon}
+SELECT airline_name, COUNT(*) as to_or_climb_number 
+FROM
+  (SELECT record.record_id, aircraft.airline, 
+          airline.airline_name, flight.phase_of_flight
+   FROM record JOIN aircraft 
+                 ON record.aircraft = aircraft.aircraft_id
+	             JOIN airline 
+	               ON airline.airline_id = aircraft.aircraft_id
+	             JOIN flight 
+	               ON record.flight = flight.flight_id
+   WHERE flight.phase_of_flight = 'Take-off run'
+      OR flight.phase_of_flight = 'Climb') AS new
+  GROUP BY airline_name;
+```
+
+# ******************TASK 5********************
+```{sql connection = dbcon}
+SELECT airport_name, COUNT(*) AS airport_with_most_incidents
+FROM
+  (SELECT record.record_id, location.airport, airport.airport_name 
+   FROM record JOIN location 
+                 ON record.location = location.location_id
+	             JOIN airport 
+	               ON location.airport = airport.airport_id) AS new_table
+GROUP BY airport_name
+ORDER BY airport_with_most_incidents DESC LIMIT 1;
+```
+
+# ******************TASK 6********************
+```{sql connection = dbcon}
+SELECT SUBSTRING(flight_date,-9,4) AS Year, count(DISTINCT r.record_id) AS Number_of_strike 
+FROM flight f
+INNER JOIN record r ON f.flight_id = r.flight
+GROUP BY Year
+HAVING Year != ''
+```
+
+# ******************TASK 7********************
+```{sql connection = dbcon}
+#count 2008 take-off/climbing
+SELECT  count(*) AS 2008_up
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2008%') AND (f.phase_of_flight LIKE '%Take-off%' OR f.phase_of_flight LIKE '%Climb%')
+```
+#1-2
+```{sql connection = dbcon}
+#count 2009 take_off/ climbing
+SELECT  count(*) AS 2009_up
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2009%') AND (f.phase_of_flight LIKE '%Take-off%' OR f.phase_of_flight LIKE '%Climb%')
+```
+#1-3
+```{sql connection = dbcon}
+#count 2010 take_off/ climbing
+SELECT  count(*) AS 2010_up
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2010%') AND (f.phase_of_flight LIKE '%Take-off%' OR f.phase_of_flight LIKE '%Climb%')
+```
+
+#1-4
+```{sql connection = dbcon}
+#count 2011 take_off/ climbing
+SELECT  count(*) AS 2011_up
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2011%') AND (f.phase_of_flight LIKE '%Take-off%' OR f.phase_of_flight LIKE '%Climb%')
+```
+
+#2-1
+```{sql connection = dbcon}
+#count 2008 descent/approach/landing
+SELECT  count(*) AS 2008_down
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2008%') AND (f.phase_of_flight LIKE '%Landing%' OR f.phase_of_flight LIKE '%Approach%' OR 
+                                         f.phase_of_flight LIKE('%Descent%'))
+```
+
+#2-2
+```{sql connection = dbcon}
+#count 2009 descent/approach/landing
+SELECT  count(*) AS 2009_down
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2009%') AND (f.phase_of_flight LIKE '%Landing%' OR f.phase_of_flight LIKE '%Approach%' OR 
+                                         f.phase_of_flight LIKE('%Descent%'))
+```
+
+#2-3
+```{sql connection = dbcon}
+#count 2010 descent/approach/landing
+SELECT  count(*) AS 2010_down
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2010%') AND (f.phase_of_flight LIKE '%Landing%' OR f.phase_of_flight LIKE '%Approach%' OR 
+                                         f.phase_of_flight LIKE('%Descent%'))
+```
+
+#2-4
+```{sql connection = dbcon}
+#count 2011 descent/approach/landing
+SELECT  count(*) AS 2011_down
+FROM record r
+INNER JOIN flight f ON f.flight_id = r.flight
+WHERE f.flight_date like ('%2011%') AND (f.phase_of_flight LIKE '%Landing%' OR f.phase_of_flight LIKE '%Approach%' OR 
+                                         f.phase_of_flight LIKE('%Descent%'))
+```
+
+```{r}
+up<-c(810, 1127, 1062, 1030)
+down<-c(1442, 2109, 2053, 1913)
+df<-data.frame(up,down)
+df
+```
+
+```{r}
+barplot(t(as.matrix(df)),
+        main = "Bird strike Incidents 2008-2011", 
+        xlab = "Year",
+        ylab = "Number",
+        names.arg = c("2008", "2009", "2010", "2011"),
+        col=c("Purple","Blue"),
+        beside = TRUE)
+
+```
+
+# ******************TASK 8********************
+```{sql connection = dbcon}
+CREATE PROCEDURE delete_record(IN id INTEGER)
+  BEGIN 
+    IF id IN (SELECT record_id FROM record)
+      THEN DELETE FROM record WHERE record_id = id;
+    END IF;
+  END;
+```
+
+```{sql connection = dbcon}
+DROP PROCEDURE IF EXISTS delete_record;
+```
+
+# *********************Disconnect database***********************
+```{r}
+dbDisconnect(dbcon)
+```
+
+# References:
+# 1. https://stringr.tidyverse.org/reference/str_trim.html
+# 2. https://stackoverflow.com/questions/1523126/how-to-read-data-when-some-numbers-contain-commas-as-thousand-separator
+# 3  https://dev.mysql.com/doc/refman/8.0/en/date-and-time-functions.html#function_str-to-date
+# 4. https://dbi.r-dbi.org/reference/dbgetquery
+# 5. https://stackoverflow.com/questions/8813753/what-is-the-difference-between-gc-and-rm
