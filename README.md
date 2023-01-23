@@ -13,11 +13,8 @@ In this project, our team has built a relational schema based on the large bird 
 4. Formed the report.
 
 # Project ERD
-![erd-1-1](https://user-images.githubusercontent.com/76865032/213975711-4ed18208-96a0-4e4f-b934-9ef85313324a.jpeg)
+![image](https://user-images.githubusercontent.com/76865032/213975866-ff7b3031-1618-41fb-858c-a057437f77b6.png)
 
-![erd-2](https://user-images.githubusercontent.com/76865032/213975560-d31df809-ad7a-4408-b0d4-75944067eb74.jpeg)
-
-![erd-3](https://user-images.githubusercontent.com/76865032/213975565-e7000dcd-9e1e-4282-bd2e-b90c85b52e5d.jpeg)
 
 # Acknowledgements
 This is a group project. I would like to thank my great teammates Lin Han, Teresa, and Kan Zhou for their hard work and the enjoyable cooperation we had on the project.
