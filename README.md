@@ -17,4 +17,4 @@ In this project, our team has built a relational schema based on the large bird 
 
 
 # Acknowledgements
-This is a group project. I would like to thank my great teammates Lin Han, Teresa, and Kan Zhou for their hard work and the enjoyable cooperation we had on the project.
+This is a group project. I would like to thank my great teammates Ce Zhao, Ruoxuan Peng, and Yifan Zhou for their hard work and the enjoyable cooperation we had on the project.
