@@ -7,9 +7,9 @@ In this project, our team has built a relational schema based on the large bird 
 3. How to analyze data, visualize results, and form a report.
 
 # My contribution to the project
-1. Designed Crow's Foot ERD, and then a logical model as a Crow's Feet Relational Schema.
+1. Designed Crow's Foot ERD and a logical model as a Crow's Feet Relational Schema for the project.
 2. Realised the schema in the MySQL database.
-3. Load the CSV file into R and populate the tables with the data.
+3. Loaded the CSV file into R and populated the tables with the data.
 4. Formed the report.
 
 # Project ERD
